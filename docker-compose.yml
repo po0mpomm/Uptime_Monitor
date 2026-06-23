@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: uptime
+      POSTGRES_PASSWORD: uptime
+      POSTGRES_DB: uptime
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uptime"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://uptime:uptime@db:5432/uptime
+      LOG_LEVEL: INFO
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://frontend:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: ./backend          # same image as api, different command
+    command: python -m worker.main
+    environment:
+      DATABASE_URL: postgresql+asyncpg://uptime:uptime@db:5432/uptime
+      LOG_LEVEL: INFO
+      WORKER_POLL_INTERVAL_SECONDS: "5"
+      WORKER_TICK_BATCH_SIZE: "50"
+      WORKER_CONCURRENCY: "10"
+      WORKER_HEARTBEAT_STALE_THRESHOLD_SECONDS: "60"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+      # Server-side rewrites use this (internal Docker network)
+      INTERNAL_API_URL: http://api:8000/api
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:

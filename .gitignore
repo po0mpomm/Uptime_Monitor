@@ -1,0 +1,10 @@
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.idea/
+.vscode/
+*.log
