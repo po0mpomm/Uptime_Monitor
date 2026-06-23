@@ -281,6 +281,25 @@ is there something error? then fix this
 
 ---
 
+### 3.7 Frontend design looked too basic and AI generated
+
+**What AI generated (wrong):**
+A dark theme with a generic purple gradient accent color that looked like every other AI-generated boilerplate UI.
+
+**My prompt to fix:**
+```
+make the frontend light coloured, not in dark colour 
+
+and also change the blue clour as its looks like AI generated UI
+
+design looks too basic, 
+make it more eyecatchy and beutiful
+```
+
+**What happened:** AI rewrote `globals.css` with a premium light theme, glassmorphic shadows, a subtle animated mesh background, and a sharp Sunset Coral gradient, completely removing the basic dark purple boilerplate.
+
+---
+
 ## 4. What AI Did That Would Have Taken Me Days
 
 - `FOR UPDATE SKIP LOCKED` exact syntax in SQLAlchemy 2.0 async context
