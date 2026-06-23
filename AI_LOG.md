@@ -284,7 +284,7 @@ is there something error? then fix this
 ### 3.7 Frontend design looked too basic and AI generated
 
 **What AI generated (wrong):**
-A dark theme with a generic purple gradient accent color that looked like every other AI-generated boilerplate UI.
+ai gave dark theme with purple gradient, looked like every other ai generated ui
 
 **My prompt to fix:**
 ```
@@ -296,7 +296,7 @@ design looks too basic,
 make it more eyecatchy and beutiful
 ```
 
-**What happened:** AI rewrote `globals.css` with a premium light theme, glassmorphic shadows, a subtle animated mesh background, and a sharp Sunset Coral gradient, completely removing the basic dark purple boilerplate.
+**What happened:** AI rewrote globals.css — light theme, removed the purple, added better shadows and gradient. looks much better now.
 
 ---
 
