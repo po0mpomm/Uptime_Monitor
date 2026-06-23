@@ -1,97 +1,109 @@
-# Uptime Monitor
+<div align="center">
+  <h1>🟢 Uptime Monitor MVP</h1>
+  <p><strong>A lightweight, high-performance, full-stack URL monitoring service built for speed and reliability.</strong></p>
 
-A full-stack URL uptime monitoring service. Register URLs, ping them on a configurable schedule, and watch their live up/down status on a dashboard.
+  [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](#)
+  [![Next.js](https://img.shields.io/badge/Next.js_15-000000?style=for-the-badge&logo=next.js&logoColor=white)](#)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL_16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](#)
+  [![Docker](https://img.shields.io/badge/Docker_Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](#)
+</div>
 
-## One-line setup
+<br/>
+
+Register URLs, ping them on a configurable schedule, and watch their live up/down status on a responsive real-time dashboard. Designed with an emphasis on execution velocity and clean architecture over complex over-engineering.
+
+---
+
+## 🚀 One-Line Setup
+
+Get the entire ecosystem running locally right out of the box:
 
 ```bash
 docker compose up --build
 ```
 
-Wait ~30–60 seconds for all 4 containers to start. Postgres is fully healthy before the API or worker connect.
-
-## Access points
-
-| Service | URL |
-|---|---|
-| Frontend dashboard | http://localhost:3000 |
-| Backend API | http://localhost:8000 |
-| API docs (Swagger) | http://localhost:8000/docs |
-| Health endpoint | http://localhost:8000/health |
+> **Note:** Wait ~30–60 seconds for all 4 containers to start. The API and Worker containers automatically wait for the Postgres database to become fully healthy before connecting.
 
 ---
 
-## Testing UP and DOWN states
+## 📍 Access Points
 
-### Step 1 — Add a working URL (should show UP)
+| Component | URL | Description |
+|---|---|---|
+| 🖥️ **Frontend Dashboard** | [http://localhost:3000](http://localhost:3000) | Next.js Real-time UI |
+| ⚙️ **Backend API** | [http://localhost:8000](http://localhost:8000) | FastAPI Base URL |
+| 📖 **API Docs** | [http://localhost:8000/docs](http://localhost:8000/docs) | Interactive Swagger UI |
+| 🩺 **Health Probe** | [http://localhost:8000/health](http://localhost:8000/health) | DB Status & Worker Heartbeat |
 
+---
+
+## 🧪 Testing UP and DOWN States
+
+Verify the system's core state machine and behavior directly from your terminal.
+
+### Step 1 — Add a working URL (Should show UP)
 ```bash
 curl -X POST http://localhost:8000/api/monitors \
   -H "Content-Type: application/json" \
   -d '{"url": "https://example.com", "label": "Example (should be UP)"}'
 ```
 
-### Step 2 — Add a broken URL (should show DOWN)
-
+### Step 2 — Add a broken URL (Should show DOWN)
 ```bash
 curl -X POST http://localhost:8000/api/monitors \
   -H "Content-Type: application/json" \
   -d '{"url": "https://this-domain-does-not-exist-xyz.com", "label": "Broken (should be DOWN)"}'
 ```
 
-### Step 3 — Trigger immediate checks (don't wait for the schedule)
-
+### Step 3 — Trigger immediate checks 
+Bypass the scheduled worker to test immediately:
 ```bash
-# Replace {id} with the id from Step 1 or Step 2's JSON response
+# Replace {id} with the UUID from Step 1 or Step 2's JSON response
 curl -X POST http://localhost:8000/api/monitors/{id}/check
 ```
 
-> **Note:** A single failed check will show `is_up: false` on that check row immediately, but the monitor's `current_state` only flips to `"down"` after **two consecutive failures** (see Architecture section). Call `/check` twice on the broken URL to see the dashboard badge turn red, or wait for two scheduled ticks.
+> ⚠️ **Important (The 2-Failure Rule):** A single failed check immediately records `is_up: false` on the history row. However, the monitor's `current_state` strictly flips to `"down"` only after **two consecutive failures**. Run the `/check` endpoint twice on the broken URL to see the dashboard badge turn red!
 
-### Step 4 — View the dashboard
-
-Open http://localhost:3000. Expect one green **UP** row and (after the second failed check) one red **DOWN** row.
-
-The dashboard auto-refreshes every 8 seconds — no manual page reload needed.
+### Step 4 — View the Dashboard
+Navigate to **[http://localhost:3000](http://localhost:3000)**. The dashboard auto-polls every 8 seconds, dynamically updating the status and response times without a manual page reload.
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ docker-compose.yml                                              │
 │                                                                 │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐  │
-│  │  db      │◄───│  api     │    │  worker  │    │ frontend │  │
-│  │ postgres │    │ fastapi  │    │ asyncio  │    │ next.js  │  │
-│  │  :5432   │    │  :8000   │    │ loop     │    │  :3000   │  │
-│  └──────────┘    └──────────┘    └──────────┘    └──────────┘  │
-│       ▲               ▲               ▲               │        │
-│       │               │               │               │        │
-│       └───────────────┴───────────────┘               │        │
-│                  PostgreSQL (single source of truth)  │        │
-│                                                       ▼        │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐   │
+│  │  db      │◄───│  api     │    │  worker  │    │ frontend │   │
+│  │ postgres │    │ fastapi  │    │ asyncio  │    │ next.js  │   │
+│  │  :5432   │    │  :8000   │    │ loop     │    │  :3000   │   │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────┘   │
+│       ▲               ▲               ▲               │         │
+│       │               │               │               │         │
+│       └───────────────┴───────────────┘               │         │
+│                  PostgreSQL (single source of truth)  │         │
+│                                                       ▼         │
 │                                              browser polling    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Key design decisions
+### 🧠 Key Design Decisions
 
 | Decision | Rationale |
 |---|---|
-| Separate `worker` process (not in-process scheduler) | Worker crashes don't affect API latency; API restarts don't reset schedule state |
-| Per-monitor `next_check_at` column | Survives restarts; enables different intervals per monitor; accurate to within ±5s |
-| `FOR UPDATE SKIP LOCKED` on due-monitor query | Safe for future multi-replica worker scaling at zero cost today |
-| 2-consecutive-failure threshold before `down` | A dropped packet is not an outage |
-| SSRF guard at registration time | Prevents the server from polling internal/metadata endpoints from inside its own VPC |
-| LATERAL join on `GET /monitors` | One SQL query regardless of monitor count — no N+1 |
-| No Redis / no message queue | Postgres-as-queue is correct-sized for a few dozen URLs at ~60s intervals |
-| No WebSockets | 8-second polling is simpler and sufficient at this check frequency |
+| 🔄 **Separate `worker` process** | Worker crashes don't affect API latency; API restarts don't reset schedule state. |
+| ⏱️ **Per-monitor `next_check_at`** | Survives restarts; enables different intervals per monitor; accurate within ±5s. |
+| 🔒 **`FOR UPDATE SKIP LOCKED`** | Safe for future multi-replica worker scaling at zero cost today. |
+| 🚦 **2-Failure Threshold** | A dropped packet is not an outage. Flips to `down` only on consecutive failures. |
+| 🛡️ **SSRF Guard Validation** | Prevents the server from polling internal/metadata endpoints from inside its own VPC. |
+| ⚡ **`LATERAL` SQL Joins** | Fetches the latest check embedded in the monitor list. Exactly one query — no N+1. |
+| 🐘 **Postgres over Redis/Celery** | Postgres-as-queue is perfectly right-sized for a few dozen URLs. |
 
 ---
 
-## API Reference
+## 🌐 API Reference
 
 | Method | Path | Description |
 |---|---|---|
@@ -100,76 +112,57 @@ The dashboard auto-refreshes every 8 seconds — no manual page reload needed.
 | `GET` | `/api/monitors/{id}/history` | Last N checks for one monitor (`?limit=50`) |
 | `POST` | `/api/monitors/{id}/check` | Trigger an immediate check, bypassing the schedule |
 | `PATCH` | `/api/monitors/{id}` | Toggle `is_active` (soft disable without deleting history) |
-| `DELETE` | `/api/monitors/{id}` | Remove monitor + all history (cascade) |
+| `DELETE` | `/api/monitors/{id}` | Remove monitor + all history (Cascade) |
 | `GET` | `/health` | Liveness probe — DB status + worker heartbeat |
 
-Full interactive docs at **http://localhost:8000/docs** (Swagger UI, auto-generated by FastAPI).
+Explore the full interactive documentation at **[http://localhost:8000/docs](http://localhost:8000/docs)**.
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
-All settings are environment variables. See `docker-compose.yml` for the defaults used in local development.
+All settings are environment variables. See `docker-compose.yml` for local development defaults.
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://uptime:uptime@db:5432/uptime` | Async Postgres connection string |
-| `LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
+| `DATABASE_URL` | `postgresql+asyncpg://...` | Async Postgres connection string |
 | `WORKER_POLL_INTERVAL_SECONDS` | `5` | How often the worker polls for due monitors |
-| `WORKER_TICK_BATCH_SIZE` | `50` | Max monitors checked per tick |
-| `WORKER_CONCURRENCY` | `10` | Max concurrent outbound HTTP checks per tick |
-| `WORKER_HEARTBEAT_STALE_THRESHOLD_SECONDS` | `60` | `/health` returns 503 if worker hasn't ticked in this many seconds |
+| `WORKER_HEARTBEAT_STALE_THRESHOLD_SECONDS` | `60` | `/health` returns 503 if worker hasn't ticked recently |
 | `RATE_LIMIT_PER_MINUTE` | `10` | Max `POST /monitors` requests per IP per minute |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://frontend:3000` | Comma-separated CORS allowlist |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,...` | Comma-separated CORS allowlist |
 
 ---
 
-## Running tests
+## ☁️ Deployment Sketch
 
-```bash
-# Unit tests only (no database required)
-cd backend
-pip install -r requirements.txt
-python -m pytest tests/test_monitor_service.py -v
-```
+The included `infra/main.tf` outlines a hypothetical, low-cost deployment on AWS using Infrastructure-as-Code. 
 
----
+**Topology:**
+- **Compute:** ECS Fargate (running the API and Worker containers)
+- **Database:** RDS PostgreSQL 16 (in private subnets)
+- **Network:** Application Load Balancer (ALB)
+- **Frontend:** Next.js static export hosted on S3 + CloudFront
 
-## What's explicitly excluded (and why)
-
-| Feature | Why excluded |
-|---|---|
-| Authentication / multi-tenancy | Out of scope for MVP — single-user monitoring tool |
-| Email / Slack alerting | Adds integration complexity; dashboard + `/health` endpoint cover the MVP need |
-| Redis / message queue | Postgres-as-queue is correct for this scale |
-| WebSockets | 8-second polling is sufficient; WebSockets add connection management overhead |
-| Horizontal worker scaling | `SKIP LOCKED` makes it safe to add later; not needed at this scale |
-| DNS rebinding protection | Noted as out-of-scope: SSRF guard fires once at registration time |
-| SSL certificate verification per-monitor | Future per-monitor config; currently follows default httpx behavior |
+*Estimated cost: ~$25–40/month for an MVP-scale deployment.*
 
 ---
 
-## Repository structure
+## 📁 Repository Structure
 
-```
+```text
 uptime-monitor/
 ├── backend/
-│   ├── app/
-│   │   ├── main.py                # FastAPI bootstrap
-│   │   ├── models.py              # SQLAlchemy ORM models
-│   │   ├── schemas.py             # Pydantic request/response models
-│   │   ├── database.py            # Async engine + session factory
-│   │   ├── api/routes/            # HTTP layer (thin, calls services)
-│   │   ├── services/              # Business logic (pinger, state machine, SSRF)
-│   │   ├── repositories/          # All SQL queries (shared by api + worker)
-│   │   └── core/                  # Config, logging, middleware
-│   ├── worker/main.py             # Scheduler loop
-│   ├── tests/                     # Unit tests
-│   └── requirements.txt
+│   ├── app/                 # FastAPI Application
+│   │   ├── api/             # HTTP endpoints
+│   │   ├── services/        # Business logic & SSRF guards
+│   │   ├── repositories/    # Database queries
+│   │   └── models.py        # SQLAlchemy ORM
+│   ├── worker/              # Standalone Asyncio Scheduler
+│   └── tests/               # Pytest suite
 ├── frontend/
-│   ├── app/                       # Next.js App Router pages
-│   ├── components/                # React components
-│   └── lib/api.ts                 # Typed fetch client
-├── infra/main.tf                  # AWS Terraform sketch
-└── docker-compose.yml
+│   ├── app/                 # Next.js App Router
+│   └── components/          # React Components (UrlTable, StatusBadge)
+├── infra/                   # Terraform IaC Deployment Sketch
+├── AI_LOG.md                # Detailed AI Collaboration Log
+└── docker-compose.yml       # Local Environment Orchestration
 ```
